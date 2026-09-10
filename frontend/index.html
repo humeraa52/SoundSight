@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SoundSight — Minimal Premium Accessible STEM Workspace</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <meta name="description" content="An audio-first AI assistive learning workspace converting STEM content to clear audio for visually impaired students." />
+</head>
+<body>
+
+  <!-- Screen Reader Announcements Live Region -->
+  <div id="srLiveAnnouncer" class="hidden" aria-live="assertive" aria-atomic="true"></div>
+
+  <!-- MINIMAL ACCESSIBLE HEADER -->
+  <header class="app-header" role="banner">
+    <div class="header-inner">
+      <a href="#dashboard" class="brand-link" aria-label="SoundSight Home">
+        <span class="brand-name">SOUNDSIGHT</span>
+        <span class="brand-tagline">STEM AUDIO AI</span>
+      </a>
+
+      <!-- Voice Status Indicator -->
+      <div class="voice-status-wrapper" role="region" aria-label="Voice Interaction Status">
+        <button id="micToggleBtn" class="btn-mic-toggle" aria-label="Toggle Microphone Voice Recognition (Shortcut: Space)" aria-pressed="false" title="Toggle Mic (Spacebar)">
+          🎙️
+        </button>
+        <div class="voice-status-pill" id="voiceStatusPill" aria-live="polite">
+          <span class="status-dot idle" id="voiceStatusDot"></span>
+          <span id="voiceStatusText">Idle</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="main-container" role="main">
+
+    <!-- ====================================================================
+         PAGE 1: WELCOME SCREEN (SPLIT HERO ON DESKTOP, STACKED ON MOBILE)
+         ==================================================================== -->
+    <section id="view-welcome" class="view-section active-view" tabindex="-1" aria-labelledby="welcomeTitle">
+      <div class="welcome-grid">
+        <!-- Text & Action Column -->
+        <div class="welcome-info">
+          <div>
+            <h1 id="welcomeTitle" class="welcome-brand">SOUNDSIGHT</h1>
+            <p class="welcome-title-sub">An AI Assistive Workspace Converting STEM Content to Clear Audio</p>
+          </div>
+
+          <p class="welcome-quote">
+            “See less. Understand more. Learn independently.”
+          </p>
+
+          <p style="color: var(--text-secondary); font-size: 19px;">
+            Transform complex code, diagrams, flowcharts, and STEM equations into structured, conversational audio explanations.
+          </p>
+
+          <div>
+            <button id="startSoundSightBtn" class="btn btn-primary welcome-btn-start" aria-label="Start SoundSight. You can also say Start SoundSight to begin.">
+              🎙 Start SoundSight
+            </button>
+            <p class="welcome-voice-note" style="margin-top: 12px;">
+              Voice command: Say <strong>“Start SoundSight”</strong> to begin
+            </p>
+          </div>
+        </div>
+
+        <!-- Tasteful AI-Generated Hero Visual Column -->
+        <div class="welcome-media">
+          <div class="hero-image-wrapper">
+            <img 
+              src="assets/hero_student.jpg" 
+              alt="Visually impaired STEM student smiling while studying comfortably with headphones, a laptop, and educational documents on a wooden desk" 
+              class="hero-image"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         PAGE 2: MINIMAL DASHBOARD (EXACTLY 6 LARGE SPACIOUS OPTIONS)
+         ==================================================================== -->
+    <section id="view-dashboard" class="view-section" tabindex="-1" aria-labelledby="dashTitle">
+      <div class="dashboard-wrapper">
+        <div class="dashboard-header">
+          <h2 id="dashTitle" class="dashboard-title">SoundSight Workspace</h2>
+          <p class="dashboard-desc">
+            SoundSight is ready. You can say <strong>Scan</strong>, <strong>Upload</strong>, <strong>History</strong>, <strong>Revision</strong>, or <strong>Help</strong>.
+          </p>
+        </div>
+
+        <!-- 6 Large Clean Options -->
+        <div class="dashboard-grid" role="list">
+          <!-- 1. SCAN -->
+          <div id="cardScan" class="dashboard-card" role="listitem" tabindex="0" aria-label="Scan. Scan code, documents and diagrams. Key 1. Say Scan.">
+            <div class="card-title-group">
+              <h3 class="card-main-title">SCAN</h3>
+              <span class="card-key-cue">Key 1</span>
+            </div>
+            <p class="card-description">Scan code, documents and diagrams</p>
+            <p class="card-voice-hint">Voice: <span>“Scan”</span></p>
+          </div>
+
+          <!-- 2. UPLOAD -->
+          <div id="cardUpload" class="dashboard-card" role="listitem" tabindex="0" aria-label="Upload. Analyze an existing image. Key 2. Say Upload.">
+            <div class="card-title-group">
+              <h3 class="card-main-title">UPLOAD</h3>
+              <span class="card-key-cue">Key 2</span>
+            </div>
+            <p class="card-description">Analyze an existing image</p>
+            <p class="card-voice-hint">Voice: <span>“Upload”</span></p>
+          </div>
+
+          <!-- 3. HISTORY -->
+          <div id="cardHistory" class="dashboard-card" role="listitem" tabindex="0" aria-label="History. Open previous learning content. Key 3. Say History.">
+            <div class="card-title-group">
+              <h3 class="card-main-title">HISTORY</h3>
+              <span class="card-key-cue">Key 3</span>
+            </div>
+            <p class="card-description">Open previous learning content</p>
+            <p class="card-voice-hint">Voice: <span>“History”</span></p>
+          </div>
+
+          <!-- 4. REVISION -->
+          <div id="cardRevise" class="dashboard-card" role="listitem" tabindex="0" aria-label="Revision. Revise saved topics. Key 4. Say Revision.">
+            <div class="card-title-group">
+              <h3 class="card-main-title">REVISION</h3>
+              <span class="card-key-cue">Key 4</span>
+            </div>
+            <p class="card-description">Revise saved topics</p>
+            <p class="card-voice-hint">Voice: <span>“Revise [Topic]”</span></p>
+          </div>
+
+          <!-- 5. HELP -->
+          <div id="cardHelp" class="dashboard-card" role="listitem" tabindex="0" aria-label="Help. Voice commands. Key 5. Say Help.">
+            <div class="card-title-group">
+              <h3 class="card-main-title">HELP</h3>
+              <span class="card-key-cue">Key 5</span>
+            </div>
+            <p class="card-description">Voice commands</p>
+            <p class="card-voice-hint">Voice: <span>“Help”</span></p>
+          </div>
+
+          <!-- 6. SETTINGS -->
+          <div id="cardSettings" class="dashboard-card" role="listitem" tabindex="0" aria-label="Settings. Accessibility and audio. Key 6. Say Settings.">
+            <div class="card-title-group">
+              <h3 class="card-main-title">SETTINGS</h3>
+              <span class="card-key-cue">Key 6</span>
+            </div>
+            <p class="card-description">Accessibility and audio</p>
+            <p class="card-voice-hint">Voice: <span>“Settings”</span></p>
+          </div>
+        </div>
+
+        <!-- Clean Subtle Benchmark Drawer for Instant Testing -->
+        <div class="benchmarks-drawer">
+          <button id="btnToggleBenchmarks" class="benchmarks-toggle-btn" aria-expanded="false" aria-controls="benchmarkListings">
+            <span>⚙️ Benchmark STEM Cards (1-Click Verification)</span>
+          </button>
+          <div id="benchmarkListings" class="benchmarks-container hidden"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         MINIMAL SCANNER SCREEN
+         ==================================================================== -->
+    <section id="view-scanner" class="view-section" tabindex="-1" aria-labelledby="scanHeader">
+      <div class="scanner-wrapper">
+        <div class="scanner-top-bar">
+          <h2 id="scanHeader" class="scanner-title">Camera Scanner</h2>
+          <button id="btnCloseScanner" class="btn btn-secondary btn-sm" aria-label="Close camera (Escape)">
+            ✕ Close Camera
+          </button>
+        </div>
+
+        <div class="camera-viewport">
+          <video id="cameraVideo" playsinline autoplay muted aria-label="Live webcam feed"></video>
+          <canvas id="scannerCanvas" class="hidden"></canvas>
+          
+          <div id="cameraGuideBox" class="camera-guide-overlay">
+            <span id="scannerStatusText" class="scanner-status-tag">Searching for document...</span>
+          </div>
+        </div>
+
+        <div class="scanner-indicators-bar" role="region" aria-label="Capture Status & Quality Indicators">
+          <div class="indicator-item">
+            <span class="indicator-label">Stability:</span>
+            <span id="meterStabilityText" class="indicator-value">Checking...</span>
+          </div>
+          <div class="indicator-item">
+            <span class="indicator-label">Sharpness:</span>
+            <span id="meterSharpnessText" class="indicator-value">Checking...</span>
+          </div>
+          <div class="indicator-item">
+            <span class="indicator-label">Lighting:</span>
+            <span id="meterLightVal" class="indicator-value">Optimal</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         MINIMAL PROCESSING SCREEN
+         ==================================================================== -->
+    <section id="view-processing" class="view-section" tabindex="-1" aria-labelledby="procHeader">
+      <div class="processing-wrapper">
+        <h2 id="procHeader" class="processing-heading">Analyzing Content</h2>
+        <p class="processing-sub">Please wait while SoundSight processes your material.</p>
+
+        <div id="processingSequence" class="processing-list" role="list">
+          <div class="proc-step-item" role="listitem">
+            <span class="proc-icon">🔍</span> <span>Detecting content</span>
+          </div>
+          <div class="proc-step-item" role="listitem">
+            <span class="proc-icon">✨</span> <span>Improving image</span>
+          </div>
+          <div class="proc-step-item" role="listitem">
+            <span class="proc-icon">📝</span> <span>Reading content</span>
+          </div>
+          <div class="proc-step-item" role="listitem">
+            <span class="proc-icon">🧠</span> <span>Understanding content</span>
+          </div>
+          <div class="proc-step-item" role="listitem">
+            <span class="proc-icon">🎧</span> <span>Preparing explanation</span>
+          </div>
+        </div>
+
+        <div id="processingLiveStatus" class="hidden" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         EXPLANATION SCREEN (SIMPLE & CLEAN)
+         ==================================================================== -->
+    <section id="view-explanation" class="view-section" tabindex="-1" aria-labelledby="expTitle">
+      <div class="explanation-wrapper">
+        <div class="explanation-top-bar">
+          <button class="btn btn-secondary btn-sm btn-nav-home">← Dashboard</button>
+          <span style="font-size: 15px; color: var(--text-muted);">
+            Say <strong>“Explain”</strong> to start audio
+          </span>
+        </div>
+
+        <div class="explanation-card">
+          <div class="explanation-meta">
+            <span id="expContentType" class="explanation-badge">Diagram</span>
+            <span id="expConfidence" style="font-size: 14px; color: var(--text-muted);">98% Confidence</span>
+          </div>
+
+          <div id="expErrorBanner" class="hidden" style="background: rgba(255, 77, 77, 0.15); border: 1px solid #ff4d4d; border-radius: 8px; padding: 14px; margin-bottom: 16px; color: #ff6b6b; font-size: 15px;"></div>
+
+          <h2 id="expTitle" class="explanation-title">Round Robin CPU Scheduling</h2>
+          <p id="expTopic" class="explanation-topic-sub">Operating Systems</p>
+
+          <!-- Simple Audio Playback Bar -->
+          <div class="audio-bar" role="region" aria-label="Audio Playback Controls">
+            <div class="audio-bar-actions">
+              <button id="btnAudioExplain" class="btn btn-primary btn-sm" aria-label="Play Explanation">
+                ▶ Explain
+              </button>
+              <button id="btnAudioStop" class="btn btn-secondary btn-sm" aria-label="Stop Speech">
+                ⏹ Stop
+              </button>
+              <button id="btnAudioPause" class="btn btn-secondary btn-sm" aria-label="Pause Speech">
+                ⏸ Pause
+              </button>
+              <button id="btnAudioResume" class="btn btn-secondary btn-sm" aria-label="Continue Speech">
+                ⏯ Continue
+              </button>
+              <button id="btnAudioRepeat" class="btn btn-secondary btn-sm" aria-label="Repeat Speech">
+                🔄 Repeat
+              </button>
+              <span id="audioPlayingStatus" class="hidden" style="color: var(--accent-primary); font-weight: 700; margin-left: 14px; font-size: 14px;">🔊 Speaking explanation</span>
+            </div>
+            <div class="audio-bar-actions" style="margin-left: auto;">
+              <button id="btnAudioSlow" class="btn btn-secondary btn-sm" aria-label="Go Slower">
+                Slower (0.8x)
+              </button>
+              <button id="btnAudioNormal" class="btn btn-secondary btn-sm" aria-label="Normal Speed">
+                Normal (1.0x)
+              </button>
+              <button id="btnAudioFast" class="btn btn-secondary btn-sm" aria-label="Go Faster">
+                Faster (1.3x)
+              </button>
+            </div>
+          </div>
+
+          <!-- Detected Code Block Container -->
+          <div id="expDetectedCodeWrapper" class="explanation-section hidden">
+            <h3>Scanned Python Code</h3>
+            <pre id="expDetectedCodeBlock" style="background: var(--bg-tertiary); padding: 14px; border-radius: 8px; border: 1px solid var(--border-subtle); overflow-x: auto; font-family: var(--font-mono); font-size: 15px; color: var(--accent-primary); white-space: pre-wrap;"></pre>
+          </div>
+
+          <!-- Short Summary -->
+          <div class="explanation-section" id="expSummarySection">
+            <h3>Summary</h3>
+            <p id="expSummaryText">Preemptive time-sliced CPU scheduling providing fair execution time for active processes in the Ready Queue.</p>
+          </div>
+
+          <!-- Key Points -->
+          <div class="explanation-section" id="expKeyPointsSection">
+            <h3>Key Points</h3>
+            <ul id="expKeyPointsList"></ul>
+          </div>
+
+          <!-- Structural Breakdown Container -->
+          <div id="expStructureContainer" class="explanation-section"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         HISTORY VIEW (CLEAN TOPIC CARDS)
+         ==================================================================== -->
+    <section id="view-history" class="view-section" tabindex="-1" aria-labelledby="histTitle">
+      <div class="history-wrapper">
+        <div class="history-top-bar">
+          <div>
+            <h2 id="histTitle" class="history-title">Saved Content</h2>
+            <p style="font-size: 16px; color: var(--text-secondary); margin-top: 4px;">
+              Say <strong>“Open item one”</strong> or choose a topic:
+            </p>
+          </div>
+          <button class="btn btn-secondary btn-sm btn-nav-home">← Dashboard</button>
+        </div>
+
+        <div id="historyCardsContainer" class="history-cards-list"></div>
+      </div>
+    </section>
+
+    <!-- ====================================================================
+         REVISION VIEW (MINIMAL INTERFACE)
+         ==================================================================== -->
+    <section id="view-revision" class="view-section" tabindex="-1" aria-labelledby="revHeader">
+      <div class="revision-wrapper">
+        <div class="revision-top-bar">
+          <h2 id="revHeader" style="font-size: 28px; font-weight: 800;">Revision</h2>
+          <button class="btn btn-secondary btn-sm btn-nav-home">← Dashboard</button>
+        </div>
+
+        <div class="revision-prompt-card">
+          <h3 class="revision-question-heading">What would you like to revise?</h3>
+          <p class="revision-voice-lead">
+            Preferred voice command: <strong>“Revise Round Robin Scheduling”</strong> (or any saved topic).
+          </p>
+
+          <div class="revision-mode-buttons">
+            <button id="btnRevQuick" class="btn btn-primary btn-sm">⚡ Quick Revision</button>
+            <button id="btnRevDetailed" class="btn btn-secondary btn-sm">📖 Detailed Revision</button>
+            <button id="btnRevExam" class="btn btn-secondary btn-sm">🎯 Exam Revision</button>
+            <button id="btnRevQuestion" class="btn btn-secondary btn-sm">🗣️ Question Mode</button>
+          </div>
+
+          <div id="revisionContentDisplay" class="revision-result-display"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ======================================================================
+       SIMULATED VOICE INPUT BAR (CLEAN & SUBTLE)
+       ====================================================================== -->
+  <div class="sim-voice-bar" role="region" aria-label="Simulated Voice Input">
+    <div class="sim-voice-inner">
+      <span class="sim-voice-label">VOICE COMMAND:</span>
+      <form id="simVoiceForm" style="flex: 1; display: flex; gap: 10px;">
+        <input 
+          id="simVoiceInput" 
+          type="text" 
+          class="sim-voice-field" 
+          placeholder="Type a voice command (e.g. 'Scan', 'History', 'Revise Round Robin', 'Go slow', 'Explain')..." 
+          aria-label="Type a simulated voice command" 
+        />
+        <button type="submit" class="btn btn-secondary btn-sm">Run</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Hidden File Input for Uploads -->
+  <input id="fileUploadInput" type="file" accept="image/*" class="hidden" aria-hidden="true" />
+
+  <!-- ======================================================================
+       MODALS: HELP & SETTINGS
+       ====================================================================== -->
+  <div id="helpModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
+    <div class="modal-surface">
+      <div class="modal-top">
+        <h3 id="helpModalTitle" class="modal-heading">Voice Commands Guide</h3>
+        <button id="btnCloseHelp" class="btn btn-secondary btn-sm" aria-label="Close Help">✕</button>
+      </div>
+      <div class="modal-content">
+        <p><strong>Primary Voice Commands:</strong></p>
+        <ul>
+          <li><strong>“Scan”</strong> — Opens camera and automatically captures content.</li>
+          <li><strong>“Upload”</strong> — Opens file selector to choose an image.</li>
+          <li><strong>“History”</strong> — Announces saved learning items.</li>
+          <li><strong>“Open item one”</strong> — Opens specified history item.</li>
+          <li><strong>“Revise [Topic]”</strong> — Starts topic revision.</li>
+          <li><strong>“Explain”</strong> — Plays the structural explanation.</li>
+          <li><strong>“Stop” / “Pause” / “Continue”</strong> — Speech controls.</li>
+          <li><strong>“Go slow” / “Normal speed” / “Go faster”</strong> — Adjusts rate.</li>
+          <li><strong>“Home” / “Back”</strong> — Returns to dashboard.</li>
+        </ul>
+        <p style="margin-top: 16px;"><strong>Keyboard Shortcuts:</strong></p>
+        <ul>
+          <li><strong>Spacebar:</strong> Toggle microphone listening</li>
+          <li><strong>Escape:</strong> Stop audio / Close camera</li>
+          <li><strong>Keys 1–6:</strong> Direct navigation from Dashboard</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div id="settingsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+    <div class="modal-surface">
+      <div class="modal-top">
+        <h3 id="settingsModalTitle" class="modal-heading">Settings</h3>
+        <button id="btnCloseSettings" class="btn btn-secondary btn-sm" aria-label="Close Settings">✕</button>
+      </div>
+      <div class="modal-content">
+        <label style="display: block; font-weight: 700; margin-bottom: 8px;">Default Speech Rate:</label>
+        <select id="settingSpeechRate" class="sim-voice-field" style="width: 100%; margin-bottom: 20px;" onchange="SoundSightTTS.setRate(parseFloat(this.value))">
+          <option value="0.8">Slow (0.8x)</option>
+          <option value="1.0" selected>Normal (1.0x)</option>
+          <option value="1.3">Faster (1.3x)</option>
+        </select>
+        <p style="font-size: 15px; color: var(--text-muted);">
+          SoundSight STEM AI Reasoning Engine: Active & Offline-Capable.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/audio-earcons.js"></script>
+  <script src="js/tts-controller.js"></script>
+  <script src="js/voice-manager.js"></script>
+  <script src="js/camera-scanner.js"></script>
+  <script src="js/vendor/tesseract.min.js"></script>
+  <script src="js/stem-analyzer.js"></script>
+  <script src="js/history-manager.js"></script>
+  <script src="js/revision-manager.js"></script>
+  <script src="js/samples.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
