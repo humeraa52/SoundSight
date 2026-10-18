@@ -999,3 +999,693 @@ body {
 .hidden {
   display: none !important;
 }
+
+/* ============================================================
+   ASK AI - FLOATING AI ACCESS
+   ============================================================ */
+
+.ask-ai-floating {
+  position: absolute;
+  right: 28px;
+  bottom: 24px;
+  z-index: 50;
+}
+
+.ask-ai-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+
+  height: 58px;
+  padding: 0 24px 0 16px;
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+
+  background: rgba(17, 25, 48, 0.94);
+
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.30),
+    0 0 22px rgba(255, 210, 40, 0.12);
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.ask-ai-button:hover {
+  transform: translateY(-2px);
+
+  background: rgba(24, 32, 58, 0.98);
+
+  box-shadow:
+    0 10px 32px rgba(0, 0, 0, 0.34),
+    0 0 28px rgba(255, 210, 40, 0.22);
+}
+
+.ask-ai-button:focus-visible {
+  outline: 2px solid #ffd429;
+  outline-offset: 4px;
+}
+
+/* Yellow AI light */
+
+.ask-ai-light {
+  width: 30px;
+  height: 30px;
+
+  flex: 0 0 30px;
+
+  border-radius: 50%;
+
+  background: #ffd429;
+
+  box-shadow:
+    0 0 8px rgba(255, 212, 41, 0.85),
+    0 0 20px rgba(255, 212, 41, 0.55),
+    0 0 36px rgba(255, 212, 41, 0.25);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.ask-ai-button:hover .ask-ai-light {
+  transform: scale(1.08);
+
+  box-shadow:
+    0 0 10px rgba(255, 212, 41, 0.95),
+    0 0 24px rgba(255, 212, 41, 0.65),
+    0 0 42px rgba(255, 212, 41, 0.30);
+}
+
+/* ASK AI text */
+
+.ask-ai-text {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   SOUNDSIGHT ASK AI
+   Clean Voice-First AI Workspace
+   ============================================================ */
+
+#view-ask-ai {
+  min-height: 100%;
+  padding: 28px;
+  box-sizing: border-box;
+}
+
+.ask-ai-wrapper {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+
+/* ============================================================
+   TOP BAR
+   ============================================================ */
+
+.ask-ai-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding: 4px 2px 10px;
+}
+
+.ask-ai-label {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: #ffd429;
+
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+}
+
+.ask-ai-title {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.ask-ai-subtitle {
+  margin: 7px 0 0;
+
+  color: #94a3b8;
+
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+
+/* ============================================================
+   CONTEXT
+   ============================================================ */
+
+.ask-ai-context {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-height: 48px;
+  padding: 10px 16px;
+
+  background: rgba(255, 255, 255, 0.035);
+
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+
+  box-sizing: border-box;
+}
+
+.ask-ai-context-label {
+  flex-shrink: 0;
+
+  color: #64748b;
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.ask-ai-context strong {
+  color: #cbd5e1;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+
+/* ============================================================
+   CONVERSATION
+   ============================================================ */
+
+.ask-ai-conversation {
+  min-height: 390px;
+  max-height: 52vh;
+
+  overflow-y: auto;
+
+  padding: 28px;
+
+  background:
+    radial-gradient(
+      circle at 50% 20%,
+      rgba(255, 212, 41, 0.035),
+      transparent 35%
+    ),
+    rgba(7, 13, 28, 0.72);
+
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+
+  box-sizing: border-box;
+
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+
+/* ============================================================
+   WELCOME STATE
+   ============================================================ */
+
+.ask-ai-welcome {
+  min-height: 330px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  padding: 30px;
+  box-sizing: border-box;
+}
+
+.ask-ai-orb {
+  width: 64px;
+  height: 64px;
+
+  margin-bottom: 20px;
+
+  border-radius: 50%;
+
+  background: #ffd429;
+
+  box-shadow:
+    0 0 12px rgba(255, 212, 41, 0.9),
+    0 0 30px rgba(255, 212, 41, 0.35),
+    0 0 60px rgba(255, 212, 41, 0.12);
+
+  animation: askAIIdleGlow 3s ease-in-out infinite;
+}
+
+@keyframes askAIIdleGlow {
+
+  0%,
+  100% {
+    box-shadow:
+      0 0 12px rgba(255, 212, 41, 0.85),
+      0 0 28px rgba(255, 212, 41, 0.30),
+      0 0 55px rgba(255, 212, 41, 0.10);
+  }
+
+  50% {
+    box-shadow:
+      0 0 16px rgba(255, 212, 41, 1),
+      0 0 38px rgba(255, 212, 41, 0.42),
+      0 0 70px rgba(255, 212, 41, 0.16);
+  }
+}
+
+.ask-ai-welcome h3 {
+  margin: 0 0 8px;
+
+  color: #f8fafc;
+
+  font-size: 22px;
+  font-weight: 750;
+}
+
+.ask-ai-welcome p {
+  max-width: 500px;
+
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+
+/* ============================================================
+   CONVERSATION MESSAGES
+   ============================================================ */
+
+.ask-ai-message {
+  max-width: 78%;
+
+  margin-bottom: 16px;
+  padding: 14px 17px;
+
+  border-radius: 16px;
+
+  font-size: 15px;
+  line-height: 1.65;
+
+  box-sizing: border-box;
+}
+
+.ask-ai-message.user {
+  margin-left: auto;
+
+  background: rgba(255, 212, 41, 0.10);
+
+  border: 1px solid rgba(255, 212, 41, 0.18);
+
+  color: #f8fafc;
+
+  border-bottom-right-radius: 5px;
+}
+
+.ask-ai-message.assistant {
+  margin-right: auto;
+
+  background: rgba(255, 255, 255, 0.045);
+
+  border: 1px solid rgba(255, 255, 255, 0.07);
+
+  color: #dbe4f0;
+
+  border-bottom-left-radius: 5px;
+}
+
+
+/* ============================================================
+   VOICE STATE
+   ============================================================ */
+
+.ask-ai-voice-state {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  min-height: 58px;
+  padding: 11px 17px;
+
+  background: rgba(255, 212, 41, 0.045);
+
+  border: 1px solid rgba(255, 212, 41, 0.12);
+  border-radius: 14px;
+
+  box-sizing: border-box;
+}
+
+.ask-ai-voice-indicator {
+  width: 11px;
+  height: 11px;
+
+  flex: 0 0 11px;
+
+  border-radius: 50%;
+
+  background: #ffd429;
+
+  box-shadow:
+    0 0 9px rgba(255, 212, 41, 0.7);
+}
+
+.ask-ai-voice-state strong {
+  display: block;
+
+  color: #f8fafc;
+
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.ask-ai-voice-state span:not(.ask-ai-voice-indicator) {
+  display: block;
+
+  margin-top: 2px;
+
+  color: #64748b;
+
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   QUICK ACTIONS
+   ============================================================ */
+
+.ask-ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.ask-ai-action {
+  padding: 9px 14px;
+
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.035);
+
+  color: #cbd5e1;
+
+  font-size: 12px;
+  font-weight: 650;
+
+  cursor: pointer;
+
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.ask-ai-action:hover {
+  background: rgba(255, 212, 41, 0.08);
+
+  border-color: rgba(255, 212, 41, 0.25);
+
+  color: #ffd429;
+
+  transform: translateY(-1px);
+}
+
+.ask-ai-action:focus-visible {
+  outline: 2px solid #ffd429;
+  outline-offset: 3px;
+}
+
+
+/* ============================================================
+   CONTROL BAR
+   ============================================================ */
+
+.ask-ai-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+
+  gap: 8px;
+
+  padding-top: 2px;
+}
+
+.ask-ai-controls .btn {
+  min-height: 36px;
+
+  padding: 7px 13px;
+
+  font-size: 12px;
+}
+
+
+/* ============================================================
+   BRAILLE AREA
+   ============================================================ */
+
+.ask-ai-braille-area {
+  margin-top: 4px;
+  padding: 15px 17px;
+
+  background: rgba(255, 255, 255, 0.025);
+
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  border-radius: 13px;
+
+  box-sizing: border-box;
+}
+
+.ask-ai-braille-label {
+  display: block;
+
+  margin-bottom: 5px;
+
+  color: #64748b;
+
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+}
+
+.ask-ai-braille-area p {
+  display: inline;
+
+  margin: 0;
+
+  color: #64748b;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ask-ai-braille-area .btn {
+  margin-left: 12px;
+
+  padding: 7px 12px;
+
+  font-size: 11px;
+}
+
+
+/* ============================================================
+   ASK AI DASHBOARD BUTTON
+   ============================================================ */
+
+#btnAskAIDashboard {
+  flex-shrink: 0;
+
+  min-width: 100px;
+}
+
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+
+@media (max-width: 700px) {
+
+  #view-ask-ai {
+    padding: 18px 14px;
+  }
+
+  .ask-ai-top-bar {
+    align-items: flex-start;
+  }
+
+  .ask-ai-title {
+    font-size: 28px;
+  }
+
+  .ask-ai-conversation {
+    min-height: 340px;
+
+    padding: 18px;
+  }
+
+  .ask-ai-welcome {
+    min-height: 290px;
+  }
+
+  .ask-ai-message {
+    max-width: 90%;
+  }
+
+  .ask-ai-braille-area p {
+    display: block;
+
+    margin-bottom: 10px;
+  }
+
+  .ask-ai-braille-area .btn {
+    margin-left: 0;
+  }
+}
+
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .ask-ai-orb {
+    animation: none;
+  }
+
+  .ask-ai-button,
+  .ask-ai-action {
+    transition: none;
+  }
+}
+
+.ask-popup {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(5, 10, 20, 0.82);
+  padding: 16px;
+  box-sizing: border-box;
+}
+ 
+.ask-popup.active {
+  display: flex;
+}
+ 
+.ask-popup-surface {
+  width: min(94vw, 640px);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  box-sizing: border-box;
+  background: var(--bg-surface, #131B2E);
+  color: var(--text-primary, #fff);
+  border: 2px solid var(--accent-primary, #ffd900);
+  border-radius: 20px;
+}
+ 
+.ask-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+ 
+.ask-popup-header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--accent-primary, #ffd900);
+}
+ 
+.ask-popup-close {
+  font-size: 20px;
+  padding: 8px 14px;
+  cursor: pointer;
+  background: var(--bg-surface-hover, #18223B);
+  color: inherit;
+  border: 1px solid var(--border-subtle, #475569);
+  border-radius: 10px;
+}
+ 
+.ask-popup-context {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-secondary, #cbd5e1);
+}
+ 
+.ask-popup-conversation {
+  flex: 1;
+  min-height: 140px;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-main, #0B0F19);
+  border: 1px solid var(--border-subtle, #334155);
+  border-radius: 14px;
+}
+ 
+.ask-popup-form {
+  display: flex;
+  gap: 10px;
+}
+ 
+.ask-popup-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px;
+  font-size: 17px;
+  color: inherit;
+  background: var(--bg-main, #0B0F19);
+  border: 1px solid var(--border-subtle, #475569);
+  border-radius: 10px;
+}
+ 
+.ask-popup-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted, #94a3b8);
+}
+ 
+@media (max-width: 520px) {
+  .ask-popup-surface { padding: 14px; }
+  .ask-popup-form { flex-direction: column; }
+}

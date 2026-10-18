@@ -1,0 +1,10 @@
+flask
+python-dotenv
+pillow
+pillow-heif
+google-genai
+requests
+pymupdf
+python-docx
+python-pptx
+gunicorn

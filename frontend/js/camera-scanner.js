@@ -17,14 +17,21 @@ class SoundSightCameraScanner {
     this.canvasEl = null;
     this.stream = null;
     this.isRunning = false;
+    this.isStarting = false;
+    this.state = 'IDLE'; // IDLE | CAMERA_STARTING | WAITING_FOR_CAPTURE | STABILIZING | CAPTURING
     this.analysisInterval = null;
+    this.captureTimer = null;
     
-    // Auto-capture criteria tracking
+    // Auto-capture criteria tracking & frame metrics
     this.prevFrameData = null;
     this.consecutiveStableFrames = 0;
     this.requiredStableFrames = 12; // ~1.2s at 10 FPS
+    // Scanner guidance is repeated only if the same problem
+    // remains for about 8 seconds.
     this.lastGuidanceTime = 0;
-    this.guidanceCooldownMs = 3500;
+    this.lastGuidanceType = null;
+    this.guidanceCooldownMs = 8000;
+    this.lastGuidanceType = null;
     this.captured = false;
     
     this.onCaptureCallback = null;
@@ -37,10 +44,23 @@ class SoundSightCameraScanner {
   }
 
   async start() {
+    // Guard against being started again while already running/starting.
+    // A duplicate "Scan" command firing before this finished initializing
+    // used to launch a second overlapping getUserMedia() call, which is
+    // exactly what made the camera flaky and take many tries to open.
+    if (this.isRunning || this.isStarting) {
+      console.log('[Scanner] Already running or starting — ignoring duplicate start()');
+      return;
+    }
+    this.isStarting = true;
+    this.state = 'CAMERA_STARTING';
     this.captured = false;
     this.consecutiveStableFrames = 0;
     this.prevFrameData = null;
-    this.lastGuidanceTime = Date.now() + 2000; // brief grace period before guidance
+    // Wait before giving the first problem guidance.
+    this.lastGuidanceTime = Date.now();
+    this.guidanceCooldownMs = 8000;
+    this.lastGuidanceType = null;
 
     console.log('[SCAN] Capture started');
 
@@ -62,22 +82,13 @@ class SoundSightCameraScanner {
       this.videoEl.srcObject = this.stream;
       await this.videoEl.play();
       this.isRunning = true;
+      this.isStarting = false;
+      this.state = 'WAITING_FOR_CAPTURE';
 
-      // Speak initial dual announcements
+      // Spoken TTS guidance on open
       if (window.SoundSightTTS) {
         window.SoundSightTTS.speak(
-          "The camera is now open. Please place your code, document, diagram or flowchart in front of the camera.",
-          {
-            onEnd: () => {
-              setTimeout(() => {
-                if (this.isRunning && !this.captured) {
-                  window.SoundSightTTS.speak(
-                    "Hold the content steady. I will capture it automatically when it is clear."
-                  );
-                }
-              }, 400);
-            }
-          }
+          "The camera is ready. Please place your study material in front of the camera. Take your time. When you are ready, say Capture."
         );
       }
 
@@ -86,6 +97,9 @@ class SoundSightCameraScanner {
 
     } catch (err) {
       console.error('[Scanner] Camera access error:', err);
+      this.isStarting = false;
+      this.isRunning = false;
+      this.state = 'IDLE';
       if (window.SoundSightTTS) {
         window.SoundSightTTS.speak(
           "Camera access is blocked. Please allow camera permission in your browser settings."
@@ -100,6 +114,12 @@ class SoundSightCameraScanner {
 
   stop() {
     this.isRunning = false;
+    this.isStarting = false;
+    this.state = 'IDLE';
+    if (this.captureTimer) {
+      clearTimeout(this.captureTimer);
+      this.captureTimer = null;
+    }
     if (this.analysisInterval) {
       clearInterval(this.analysisInterval);
       this.analysisInterval = null;
@@ -110,6 +130,11 @@ class SoundSightCameraScanner {
     }
     if (this.videoEl) {
       this.videoEl.srcObject = null;
+    }
+    const guideBox = document.getElementById('cameraGuideBox');
+    if (guideBox) {
+      guideBox.classList.remove('capturing');
+      guideBox.classList.remove('guide-capturing');
     }
     this.updateScannerMeters({ stability: 0, sharpness: 0, lighting: 'Checking...', status: 'Camera Idle' });
   }
@@ -219,91 +244,196 @@ class SoundSightCameraScanner {
     const sharpnessPct = Math.max(0, Math.min(100, Math.round((laplacianVar / 100) * 100)));
     let lightLabel = isTooDark ? "Too Dark" : (isWashedOut ? "Too Bright" : "Optimal");
     
+    let statusMsg = "Camera ready. Say 'Capture' when ready";
+    if (this.state === 'STABILIZING') {
+      statusMsg = "Hold steady... Capturing now";
+    } else if (this.state === 'CAPTURING') {
+      statusMsg = "Processing image...";
+    } else if (documentDetected && isSharp && isSteady) {
+      statusMsg = "Material clear & steady. Say 'Capture'";
+    } else if (documentDetected) {
+      statusMsg = "Material detected. Say 'Capture' when ready";
+    }
+
     this.updateScannerMeters({
       stability: stabilityPct,
       sharpness: sharpnessPct,
       lighting: lightLabel,
-      status: this.consecutiveStableFrames > 0 ? `Stabilizing (${Math.round((this.consecutiveStableFrames / this.requiredStableFrames) * 100)}%)` : "Searching for clear document..."
+      status: statusMsg
     });
 
-    // Check if ready for capture
+    // Note: Auto-capture has been removed per accessibility requirements.
+    // The camera remains open until the user explicitly says "Capture".
     if (documentDetected && isGoodLighting && isSharp && isSteady) {
       this.consecutiveStableFrames++;
-      if (this.consecutiveStableFrames >= this.requiredStableFrames) {
-        this.triggerCapture();
-        return;
-      }
     } else {
       this.consecutiveStableFrames = Math.max(0, this.consecutiveStableFrames - 2);
       this.provideAudioGuidance({ documentDetected, isTooDark, isWashedOut, isSharp, isSteady });
     }
   }
 
-  provideAudioGuidance({ documentDetected, isTooDark, isWashedOut, isSharp, isSteady }) {
-    const now = Date.now();
-    if (now - this.lastGuidanceTime < this.guidanceCooldownMs) {
-      return;
-    }
-    // Only give guidance if TTS is not already speaking
-    if (window.SoundSightTTS && window.SoundSightTTS.isSpeaking) {
-      return;
-    }
-
-    let guidance = null;
-    if (!documentDetected) {
-      guidance = "I cannot detect the document.";
-    } else if (isTooDark) {
-      guidance = "The lighting is too dark. Please add more light.";
-    } else if (!isSteady) {
-      guidance = "Please hold the document steady.";
-    } else if (!isSharp) {
-      guidance = "The content is blurry.";
-    }
-
-    if (guidance) {
-      this.lastGuidanceTime = now;
-      if (window.SoundSightTTS) {
-        window.SoundSightTTS.speak(guidance);
-      }
-    }
+provideAudioGuidance({
+  documentDetected,
+  isTooDark,
+  isWashedOut,
+  isSharp,
+  isSteady
+}) {
+  if (this.state !== 'WAITING_FOR_CAPTURE') {
+    return;
   }
 
-  triggerCapture() {
-    if (this.captured) return;
-    this.captured = true;
-    console.log('[SCAN] Image captured');
-    console.log('[Scanner] Zero-click auto capture triggered!');
+  const now = Date.now();
 
-    // Announce capture
+  // Identify the current problem.
+  let guidance = null;
+  let guidanceType = null;
+
+  if (!documentDetected) {
+
+    guidanceType = 'DOCUMENT';
+    guidance =
+      "I cannot clearly detect the document. Please place the study material inside the camera area.";
+
+  } else if (isTooDark) {
+
+    guidanceType = 'LIGHT';
+    guidance =
+      "The lighting is too dark. Please add more light.";
+
+  } else if (isWashedOut) {
+
+    guidanceType = 'BRIGHT';
+    guidance =
+      "The lighting is too bright. Please reduce the light slightly.";
+
+  } else if (!isSteady) {
+
+    guidanceType = 'STEADY';
+    guidance =
+      "Please hold the document steady.";
+
+  } else if (!isSharp) {
+
+    guidanceType = 'SHARP';
+    guidance =
+      "The content is blurry. Please hold the camera steady and keep the content clearly visible.";
+  }
+
+  // Nothing is wrong anymore.
+  // Reset the guidance state.
+  if (!guidance) {
+    this.lastGuidanceType = null;
+    this.lastGuidanceTime = now;
+    return;
+  }
+
+  // A NEW problem has appeared.
+  // Start the timer, but don't speak immediately.
+  if (this.lastGuidanceType !== guidanceType) {
+    this.lastGuidanceType = guidanceType;
+    this.lastGuidanceTime = now;
+
+    console.log(
+      `[Scanner] New guidance condition: ${guidanceType}`
+    );
+
+    return;
+  }
+
+  // Same problem must remain for 8 seconds.
+  if (now - this.lastGuidanceTime < 8000) {
+    return;
+  }
+
+  // Reset timer before speaking.
+  this.lastGuidanceTime = now;
+
+  console.log(
+    `[Scanner] Repeating guidance after 8 seconds: ${guidanceType}`
+  );
+
+  if (window.SoundSightTTS) {
+    window.SoundSightTTS.speak(guidance);
+  }
+}
+
+  requestCapture() {
+    // Check scanner is active & waiting; prevent duplicate triggers
+    if (!this.isRunning || this.state !== 'WAITING_FOR_CAPTURE' || this.captured) {
+      console.log(`[Scanner] requestCapture ignored. isRunning=${this.isRunning}, state=${this.state}, captured=${this.captured}`);
+      return false;
+    }
+
+    this.captured = true;
+    this.state = 'STABILIZING';
+    console.log('[Scanner] Explicit voice capture requested. Stabilizing frame...');
+
+    this.updateScannerMeters({
+      stability: 100,
+      sharpness: 100,
+      lighting: 'Optimal',
+      status: 'Hold steady... Capturing now'
+    });
+
+    // Provide immediate auditory feedback
     if (window.SoundSightTTS) {
-      window.SoundSightTTS.speak("Capturing.");
+      window.SoundSightTTS.speak("Hold steady. Capturing now.");
     }
     if (window.SoundSightEarcons) {
-      window.SoundSightEarcons.captureClick();
+      window.SoundSightEarcons.commandChime();
     }
 
     // Flash UI guide
     const guideBox = document.getElementById('cameraGuideBox');
     if (guideBox) {
+      guideBox.classList.add('capturing');
       guideBox.classList.add('guide-capturing');
-      setTimeout(() => guideBox.classList.remove('guide-capturing'), 600);
+    }
+
+    // Wait ~1000ms for camera frame stabilization
+    this.captureTimer = setTimeout(() => {
+      if (!this.isRunning) return;
+      this.executeCapture();
+    }, 1000);
+
+    return true;
+  }
+
+  executeCapture() {
+    this.state = 'CAPTURING';
+    console.log('[SCAN] Image captured');
+
+    if (window.SoundSightEarcons) {
+      window.SoundSightEarcons.captureClick();
+    }
+
+    const guideBox = document.getElementById('cameraGuideBox');
+    if (guideBox) {
+      guideBox.classList.remove('capturing');
+      guideBox.classList.remove('guide-capturing');
     }
 
     // Capture high-resolution image from video
     const captureCanvas = document.createElement('canvas');
-    captureCanvas.width = this.videoEl.videoWidth || 1280;
-    captureCanvas.height = this.videoEl.videoHeight || 720;
+    captureCanvas.width = (this.videoEl && this.videoEl.videoWidth) ? this.videoEl.videoWidth : 1280;
+    captureCanvas.height = (this.videoEl && this.videoEl.videoHeight) ? this.videoEl.videoHeight : 720;
     const captureCtx = captureCanvas.getContext('2d');
-    captureCtx.drawImage(this.videoEl, 0, 0);
+    if (this.videoEl) {
+      captureCtx.drawImage(this.videoEl, 0, 0, captureCanvas.width, captureCanvas.height);
+    }
     const fullImageData = captureCanvas.toDataURL('image/jpeg', 0.92);
 
-    // Stop camera feed
-    setTimeout(() => {
-      this.stop();
-      if (this.onCaptureCallback) {
-        this.onCaptureCallback(fullImageData);
-      }
-    }, 400);
+    // Stop camera and hand off to existing app.js callback
+    const cb = this.onCaptureCallback;
+    this.stop();
+    if (cb) {
+      cb(fullImageData);
+    }
+  }
+
+  triggerCapture() {
+    return this.requestCapture();
   }
 
   updateScannerMeters({ stability, sharpness, lighting, status }) {
