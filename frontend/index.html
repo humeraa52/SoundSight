@@ -6,6 +6,11 @@
   <title>SoundSight — Minimal Premium Accessible STEM Workspace</title>
   <link rel="stylesheet" href="css/styles.css" />
   <meta name="description" content="An audio-first AI assistive learning workspace converting STEM content to clear audio for visually impaired students." />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#ffd900" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="SoundSight" />
+  <link rel="apple-touch-icon" href="assets/icons/icon-180.png" />
 </head>
 <body>
 
@@ -788,6 +793,13 @@
   <script src="js/samples.js"></script>
   <script src="js/assistant.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
 
 </body>
 </html>
