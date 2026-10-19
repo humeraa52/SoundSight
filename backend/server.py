@@ -4,7 +4,7 @@ Serves the accessible frontend and handles STEM AI analysis, revision flows,
 file extraction, and the Ask AI assistant.
 
 History:
-  PER_USER_HISTORY = True  -> history lives in each user's own browser
+  PER_USER_HISTORY = False -> history lives in each user's own browser
                               (localStorage). The server stores none.
   PER_USER_HISTORY = False -> old behaviour: shared history.json on the server.
 
@@ -873,6 +873,10 @@ def revision_quiz():
         payload = request.get_json(force=True) or {}
         item_id = payload.get("itemId")
 
+        quiz_type = str(payload.get("quizType", "normal")).strip().lower()
+        if quiz_type not in ("normal", "rapid"):
+            quiz_type = "normal"
+
         try:
             count = int(payload.get("count", 5))
         except (TypeError, ValueError):
@@ -896,7 +900,32 @@ def revision_quiz():
             slim_context(item), ensure_ascii=False
         )[:MAX_CONTEXT_CHARS]
 
-        prompt = f"""
+        if quiz_type == "rapid":
+            prompt = f"""
+You are a quiz maker for blind students who answer by VOICE.
+Create {count} multiple choice questions ONLY from the STUDY CONTENT below.
+
+RULES:
+- Each question has exactly 4 options. Keep options short, a few words
+  each, so they are easy to hear read aloud.
+- Exactly one option is correct. Wrong options must be believable.
+- Vary which position holds the correct option.
+- Never use "all of the above" or "none of the above".
+- No questions about images, colors, layout or "which option below".
+- Start easy, then get slightly harder.
+- "answerIndex" is the position of the correct option, 0 to 3.
+- "explanation" is 1 or 2 short sentences explaining why.
+- Plain spoken text only. No markdown, no symbols that sound odd aloud.
+- Return ONLY JSON in this exact shape:
+{{"questions": [{{"question": "...", "options": ["...", "...", "...", "..."], "answerIndex": 0, "explanation": "..."}}]}}
+
+STUDY CONTENT:
+----------------
+{study}
+----------------
+"""
+        else:
+            prompt = f"""
 You are a quiz maker for blind students who answer by VOICE.
 Create {count} questions ONLY from the STUDY CONTENT below.
 
@@ -925,11 +954,39 @@ STUDY CONTENT:
         questions = []
 
         for q in (data or {}).get("questions", []):
-            if (isinstance(q, dict)
-                    and str(q.get("question", "")).strip()
-                    and str(q.get("answer", "")).strip()):
+            if not isinstance(q, dict):
+                continue
+
+            question_text = str(q.get("question", "")).strip()
+            if not question_text:
+                continue
+
+            if quiz_type == "rapid":
+                options = q.get("options")
+                if not isinstance(options, list):
+                    continue
+
+                options = [plain_text(o) for o in options if str(o).strip()]
+
+                try:
+                    idx = int(q.get("answerIndex"))
+                except (TypeError, ValueError):
+                    continue
+
+                if len(options) != 4 or not 0 <= idx < 4:
+                    continue
+
                 questions.append({
-                    "question": plain_text(q["question"]),
+                    "question": plain_text(question_text),
+                    "options": options,
+                    "answerIndex": idx,
+                    "answer": options[idx],
+                    "explanation": plain_text(q.get("explanation", ""))
+                })
+
+            elif str(q.get("answer", "")).strip():
+                questions.append({
+                    "question": plain_text(question_text),
                     "answer": plain_text(q["answer"]),
                     "explanation": plain_text(q.get("explanation", ""))
                 })
@@ -938,7 +995,11 @@ STUDY CONTENT:
             return jsonify({"success": False,
                             "error": "Could not create a quiz."}), 503
 
-        return jsonify({"success": True, "questions": questions[:count]})
+        return jsonify({
+            "success": True,
+            "quizType": quiz_type,
+            "questions": questions[:count]
+        })
 
     except Exception as e:
         print(f"[SoundSight] Quiz error: {e}")

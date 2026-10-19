@@ -1549,7 +1549,8 @@ class SoundSightApp {
         window.SoundSightHistoryManager
       ) {
         try {
-          await window.SoundSightHistoryManager.saveItem(analysis);
+          const { imageData: _drop, ...slimAnalysis } = analysis;
+          await window.SoundSightHistoryManager.saveItem(slimAnalysis);
         } catch (historyError) {
           console.warn('[APP] History save failed:', historyError);
         }

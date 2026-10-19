@@ -320,7 +320,11 @@ class SoundSightVoiceManager {
       }
 
       /* Final result: drop low-confidence junk. */
-      if (finalConfidence && finalConfidence < this.minConfidence) {
+            if (
+        finalConfidence &&
+        finalConfidence < this.minConfidence &&
+        !this.findRule(this.normalizeForMatch(final), true)
+      ) {
 
         console.log(
           `[VOICE] Ignored low-confidence speech (${finalConfidence.toFixed(2)}): ${final}`
@@ -485,7 +489,7 @@ class SoundSightVoiceManager {
             this.safeStartRecognition();
           }
 
-        }, 500);
+        }, 250);
 
         return;
       }
@@ -679,7 +683,7 @@ class SoundSightVoiceManager {
     return active;
   }
 
-  recentlySpoke(ms = 900) {
+  recentlySpoke(ms = 500) {
     return (Date.now() - this.lastTtsActiveTime) < ms;
   }
 
@@ -820,7 +824,7 @@ class SoundSightVoiceManager {
 
       this.processCommand(interimText.trim(), []);
 
-    }, 350);
+    }, 200);
   }
 
 
@@ -1577,6 +1581,10 @@ class SoundSightVoiceManager {
         intent: 'ASK_ABOUT_THIS',
         words: [
           'ask about this',
+          'about this',
+          'ask about it',
+          'ask about that',
+          'ask this',
           'ask ai about this',
           'ask about this topic',
           'ask about this content',
@@ -1763,7 +1771,8 @@ class SoundSightVoiceManager {
         .toLowerCase()
         .trim()
         .replace(/[.,!?;:]+/g, ' ')
-        .replace(/\s+/g, ' ');
+        .replace(/\s+/g, ' ')
+        .replace(/^(rk|ark|arc|ax|aks|asked|asks)\s+/, 'ask ');
 
     };
 

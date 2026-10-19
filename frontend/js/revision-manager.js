@@ -1,8 +1,3 @@
-/**
- * Calls the backend and always returns parsed JSON.
- * Throws ROUTE_MISSING for a 404 page, or SERVER_ERROR for any
- * other non-JSON reply, instead of a raw "Unexpected token '<'".
- */
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, options);
   const type = res.headers.get('content-type') || '';
@@ -16,12 +11,7 @@ async function fetchJSON(url, options = {}) {
 
 /**
  * SoundSight Voice-Based Revision Manager
- * Flow: topic list (STEM only) -> mode -> Quiz / Quick / Detailed / Exam / Ask AI
- * Quiz: one question at a time. Correct -> next. Wrong -> explain, then next.
- *
- * During a quiz the voice manager sends (almost) everything the student
- * says to handleSpeech() as an answer. Say "repeat" to hear the question
- * again, "skip" to pass, and "stop quiz" to leave.
+ * Flow: topic list -> mode -> Quiz (Rapid or Normal) / Quick / Detailed / Exam / Ask AI
  */
 
 class SoundSightRevisionManager {
@@ -31,9 +21,19 @@ class SoundSightRevisionManager {
     this.topics = [];
     this.awaitingTopic = false;
     this.awaitingMode = false;
+    this.awaitingQuizType = false;
     this.isAwaitingAnswer = false;
     this.quiz = null;
     this.busy = false;
+
+    this.bindQuizButtons();
+  }
+
+  bindQuizButtons() {
+    document.getElementById('btnRevRapid')
+      ?.addEventListener('click', () => this.selectMode('rapid'));
+    document.getElementById('btnRevNormal')
+      ?.addEventListener('click', () => this.selectMode('normal'));
   }
 
   /* ---------- helpers ---------- */
@@ -52,10 +52,6 @@ class SoundSightRevisionManager {
     const items = window.SoundSightHistoryManager
       ? window.SoundSightHistoryManager.items
       : [];
-    /*
-     * Only real STEM topics. Old non-STEM saves (from before the
-     * detection fix) are hidden here as a safety net.
-     */
     return (items || []).filter((i) =>
       i &&
       !i.isError &&
@@ -70,18 +66,23 @@ class SoundSightRevisionManager {
   resetState() {
     this.awaitingTopic = false;
     this.awaitingMode = false;
+    this.awaitingQuizType = false;
     this.isAwaitingAnswer = false;
     this.quiz = null;
     this.busy = false;
   }
 
-  /** app.js asks this before treating free speech as Ask AI. */
   wantsSpeech() {
     if (window.SoundSightApp?.currentView !== 'revision') {
       this.resetState();
       return false;
     }
-    return this.awaitingTopic || this.awaitingMode || this.isAwaitingAnswer;
+    return (
+      this.awaitingTopic ||
+      this.awaitingMode ||
+      this.awaitingQuizType ||
+      this.isAwaitingAnswer
+    );
   }
 
   parseNumber(spoken) {
@@ -111,6 +112,8 @@ class SoundSightRevisionManager {
 
   normalizeMode(text) {
     const s = String(text || '').toLowerCase();
+    if (/rapid|multiple choice|mcq|options/.test(s)) return 'rapid';
+    if (/normal quiz|question answer|spoken quiz|written quiz/.test(s)) return 'normal';
     if (/quiz|question|test me|practice/.test(s)) return 'question';
     if (/quick/.test(s)) return 'quick';
     if (/detail/.test(s)) return 'detailed';
@@ -207,7 +210,6 @@ class SoundSightRevisionManager {
     this.resetState();
     this.currentRevisionItem = item;
 
-    // Sets app.currentRevisionItem too, so the Ask AI button works.
     window.SoundSightApp?.displayRevisionView(item);
 
     this.awaitingMode = true;
@@ -218,7 +220,6 @@ class SoundSightRevisionManager {
     );
   }
 
-  /** "Revise <topic>" voice command. */
   async handleReviseCommand(topicQuery) {
     const topics = this.getStemItems();
     const query = String(topicQuery || '').toLowerCase().trim();
@@ -257,23 +258,47 @@ class SoundSightRevisionManager {
     if (/(exit|stop|end|quit|cancel) (the )?quiz/.test(spoken)) {
       this.quiz = null;
       this.isAwaitingAnswer = false;
+      this.awaitingQuizType = false;
       this.awaitingMode = true;
+      window.SoundSightApp?.displayRevisionView(this.currentRevisionItem);
       this.say('Quiz stopped. Say Quiz, Quick Revision, Detailed Revision, Exam Revision, or Back.');
       return;
     }
 
     if (this.isAwaitingAnswer) {
-
-      /* "Repeat" reads the QUESTION again; it is not an answer. */
       if (/^(repeat|repeat that|repeat the question|say again|say that again)$/.test(spoken)) {
         this.askQuestion('');
         return;
       }
 
       if (/^(skip|next|pass|i (do not|don'?t) know|don'?t know)$/.test(spoken)) {
-        await this.submitStudentAnswer(text, true);
+        await this.submitAnswer(text, { skip: true });
+      } else if (this.quiz?.type === 'rapid') {
+        const idx = this.parseOption(spoken, this.quiz.questions[this.quiz.index].options);
+        if (idx < 0) {
+          this.say('I did not catch the option. Say A, B, C or D, or say repeat.');
+          return;
+        }
+        await this.submitAnswer(text, { optionIndex: idx });
       } else {
-        await this.submitStudentAnswer(text);
+        await this.submitAnswer(text);
+      }
+      return;
+    }
+
+    if (this.awaitingQuizType) {
+      if (/^(back|go back|cancel)$/.test(spoken)) {
+        this.awaitingQuizType = false;
+        this.awaitingMode = true;
+        window.SoundSightApp?.displayRevisionView(this.currentRevisionItem);
+        this.say('Say Quiz, Quick Revision, Detailed Revision, Exam Revision, or Ask AI.');
+        return;
+      }
+      const mode = this.normalizeMode(spoken);
+      if (mode === 'rapid' || mode === 'normal') {
+        await this.startQuiz(mode);
+      } else {
+        this.say('Please say Rapid quiz for multiple choice, or Normal quiz for spoken answers.');
       }
       return;
     }
@@ -315,11 +340,17 @@ class SoundSightRevisionManager {
     this.currentMode = mode;
 
     if (mode === 'question') {
-      await this.startQuiz();
+      this.askQuizType();
+      return;
+    }
+
+    if (mode === 'rapid' || mode === 'normal') {
+      await this.startQuiz(mode);
       return;
     }
 
     this.isAwaitingAnswer = false;
+    this.awaitingQuizType = false;
     this.quiz = null;
     this.awaitingMode = true;
 
@@ -368,34 +399,76 @@ class SoundSightRevisionManager {
 
   /* ---------- quiz ---------- */
 
-  async startQuiz() {
+  askQuizType() {
+    this.awaitingMode = false;
+    this.awaitingQuizType = true;
+    this.isAwaitingAnswer = false;
+
+    const container = document.getElementById('revisionContentDisplay');
+    if (container) {
+      container.innerHTML = `
+        <div class="revision-mode-badge">Quiz</div>
+        <h2 class="revision-topic-title">${this.esc(this.currentRevisionItem?.title || '')}</h2>
+        <p>Choose a quiz type:</p>
+        <button type="button" id="quizTypeRapid" class="btn btn-primary" style="display:block;width:100%;margin:8px 0;">
+          ⚡ Rapid Quiz (choose A, B, C or D)
+        </button>
+        <button type="button" id="quizTypeNormal" class="btn btn-secondary" style="display:block;width:100%;margin:8px 0;">
+          🗣️ Normal Quiz (speak your answer)
+        </button>
+      `;
+      document.getElementById('quizTypeRapid')
+        ?.addEventListener('click', () => this.startQuiz('rapid'));
+      document.getElementById('quizTypeNormal')
+        ?.addEventListener('click', () => this.startQuiz('normal'));
+    }
+
+    this.say(
+      'Which quiz? Say Rapid quiz for multiple choice questions, ' +
+      'or Normal quiz to answer in your own words.'
+    );
+  }
+
+  async startQuiz(type = 'normal') {
     const item = this.currentRevisionItem;
+    if (!item) return;
 
     this.busy = true;
     this.awaitingMode = false;
+    this.awaitingQuizType = false;
     this.isAwaitingAnswer = false;
 
     this.say('Preparing your quiz. Please wait a moment.');
 
-       try {
+    try {
       const { imageData, ocrImageData, ...slim } = item;
 
       const data = await fetchJSON('/api/revise/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ itemId: item.id, item: slim, count: 5 })
+        body: JSON.stringify({
+          itemId: item.id,
+          item: slim,
+          count: 5,
+          quizType: type
+        })
       });
 
       if (!data.success || !data.questions?.length) {
         throw new Error(data.error || 'No questions');
       }
 
-      this.quiz = { questions: data.questions, index: 0, score: 0 };
+      this.quiz = { type, questions: data.questions, index: 0, score: 0 };
       this.busy = false;
 
+      const how = type === 'rapid'
+        ? 'Each question has four options. Say A, B, C or D. '
+        : 'Answer each one by speaking. ';
+
       this.askQuestion(
-        `Quiz on ${item.title}. ${data.questions.length} questions. ` +
-        'Answer each one by speaking. Say skip if you do not know, or repeat to hear a question again. '
+        `${type === 'rapid' ? 'Rapid' : 'Normal'} quiz on ${item.title}. ` +
+        `${data.questions.length} questions. ${how}` +
+        'Say skip if you do not know, or repeat to hear a question again. '
       );
     } catch (e) {
       console.warn('[Revision] Quiz failed:', e);
@@ -419,16 +492,70 @@ class SoundSightRevisionManager {
     if (!q) return;
 
     this.isAwaitingAnswer = true;
-    this.renderQuiz(
-      `Question ${quiz.index + 1} of ${quiz.questions.length}`,
-      q.question,
-      prefix.includes('Correct') || prefix.includes('Not quite') ? prefix : ''
-    );
 
-    this.say(`${prefix}Question ${quiz.index + 1} of ${quiz.questions.length}. ${q.question}`);
+    const label = `Question ${quiz.index + 1} of ${quiz.questions.length}`;
+    const showFeedback = prefix.includes('Correct') || prefix.includes('Not quite') ? prefix : '';
+
+    this.renderQuiz(label, q.question, showFeedback, q.options);
+
+    let speech = `${prefix}${label}. ${q.question}`;
+
+    if (quiz.type === 'rapid' && Array.isArray(q.options)) {
+      const letters = ['A', 'B', 'C', 'D'];
+      speech += ' ' + q.options
+        .map((opt, i) => `Option ${letters[i]}: ${opt}.`)
+        .join(' ');
+    }
+
+    this.say(speech);
   }
 
-  async submitStudentAnswer(studentAnswer, forceWrong = false) {
+  /** Works out which option was said: "a", "option b", "see", "two", or its text. */
+  parseOption(spoken, options) {
+    const letterWords = {
+      a: 0, ay: 0, eh: 0, hey: 0,
+      b: 1, be: 1, bee: 1,
+      c: 2, see: 2, sea: 2, si: 2,
+      d: 3, dee: 3
+    };
+    const numberWords = {
+      one: 0, won: 0, first: 0, '1': 0,
+      two: 1, to: 1, too: 1, second: 1, '2': 1,
+      three: 2, third: 2, '3': 2,
+      four: 3, for: 3, fourth: 3, '4': 3
+    };
+    const filler = new Set([
+      'option', 'answer', 'choice', 'the', 'is', 'it', 'number', 'i', 'choose',
+      'select', 'pick', 'say', 'my', 'please'
+    ]);
+
+    const tokens = spoken
+      .replace(/[.,!?]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w && !filler.has(w));
+
+    if (tokens.length === 1) {
+      if (letterWords[tokens[0]] !== undefined) return letterWords[tokens[0]];
+      if (numberWords[tokens[0]] !== undefined) return numberWords[tokens[0]];
+    }
+
+    // Otherwise match the words of an option.
+    let best = 0;
+    let found = -1;
+    let tie = false;
+
+    (options || []).forEach((opt, i) => {
+      const optTokens = String(opt).toLowerCase().split(/\W+/).filter((w) => w.length > 1);
+      const score = tokens.filter((w) => optTokens.includes(w)).length;
+      if (score > best) { best = score; found = i; tie = false; }
+      else if (score === best && score > 0) { tie = true; }
+    });
+
+    return best > 0 && !tie ? found : -1;
+  }
+
+  /** opts: { skip: true } or { optionIndex: n } (rapid) or nothing (normal). */
+  async submitAnswer(studentAnswer, opts = {}) {
     const quiz = this.quiz;
     if (!quiz || !this.isAwaitingAnswer || this.busy) return;
 
@@ -436,9 +563,14 @@ class SoundSightRevisionManager {
     this.busy = true;
 
     const q = quiz.questions[quiz.index];
+    const letters = ['A', 'B', 'C', 'D'];
     let correct = false;
 
-    if (!forceWrong) {
+    if (opts.skip) {
+      correct = false;
+    } else if (quiz.type === 'rapid') {
+      correct = opts.optionIndex === q.answerIndex;
+    } else {
       try {
         const data = await fetchJSON('/api/revise/check', {
           method: 'POST',
@@ -453,8 +585,6 @@ class SoundSightRevisionManager {
         correct = !!(data.success && data.correct);
       } catch (e) {
         console.warn('[Revision] Answer check failed:', e);
-
-        /* Do not punish the student: keep the same question open. */
         this.busy = false;
         this.isAwaitingAnswer = true;
 
@@ -463,7 +593,6 @@ class SoundSightRevisionManager {
             ? 'I cannot check answers right now. Please restart the SoundSight server.'
             : 'I could not check your answer. Please say it again, or say skip.'
         );
-
         return;
       }
     }
@@ -475,8 +604,11 @@ class SoundSightRevisionManager {
       quiz.score += 1;
       feedback = 'Correct! ';
     } else {
+      const rightAnswer = quiz.type === 'rapid'
+        ? `option ${letters[q.answerIndex]}, ${q.answer}`
+        : q.answer;
       feedback =
-        `Not quite. The right answer is: ${q.answer}. ` +
+        `Not quite. The right answer is: ${rightAnswer}. ` +
         `${q.explanation ? q.explanation + ' ' : ''}`;
     }
 
@@ -487,15 +619,15 @@ class SoundSightRevisionManager {
       return;
     }
 
-    // Finished
     const total = quiz.questions.length;
     const score = quiz.score;
+    const typeName = quiz.type === 'rapid' ? 'Rapid' : 'Normal';
 
     this.quiz = null;
     this.awaitingMode = true;
 
     this.renderQuiz(
-      'Quiz complete',
+      `${typeName} quiz complete`,
       `You scored ${score} out of ${total}.`,
       feedback
     );
@@ -508,19 +640,44 @@ class SoundSightRevisionManager {
 
   /* ---------- rendering ---------- */
 
-  renderQuiz(label, text, feedback = '') {
+  renderQuiz(label, text, feedback = '', options = null) {
     const container = document.getElementById('revisionContentDisplay');
     if (!container) return;
 
+    const type = this.quiz?.type;
+    const badge = type === 'rapid' ? 'Rapid Quiz'
+      : type === 'normal' ? 'Normal Quiz'
+      : 'Quiz';
+
+    const letters = ['A', 'B', 'C', 'D'];
+
+    const optionsHtml = (type === 'rapid' && Array.isArray(options))
+      ? options.map((opt, i) => `
+          <button type="button" class="btn btn-secondary quiz-option"
+                  data-index="${i}"
+                  style="display:block;width:100%;margin:8px 0;text-align:left;"
+                  aria-label="Option ${letters[i]}: ${this.esc(opt)}">
+            <strong>${letters[i]}.</strong> ${this.esc(opt)}
+          </button>`).join('')
+      : '';
+
     container.innerHTML = `
-      <div class="revision-mode-badge">Quiz</div>
+      <div class="revision-mode-badge">${this.esc(badge)}</div>
       <h2 class="revision-topic-title">${this.esc(this.currentRevisionItem?.title || '')}</h2>
       ${feedback ? `<p class="evaluation-feedback-text">${this.esc(feedback)}</p>` : ''}
       <div class="revision-question-card">
         <span class="question-label">${this.esc(label)}</span>
         <p class="question-text">${this.esc(text)}</p>
+        ${optionsHtml}
       </div>
     `;
+
+    container.querySelectorAll('.quiz-option').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        window.SoundSightTTS?.stop();
+        this.submitAnswer('', { optionIndex: Number(btn.dataset.index) });
+      });
+    });
   }
 
   renderRevisionData(revData) {
